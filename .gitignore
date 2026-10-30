@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production build
+dist/
+dist-ssr/
+*.local
+
+# Environment variables
+.env
+.env.production
+*.env
+
+# Cypress test artifacts & video
+cypress/videos/
+cypress/screenshots/
+
+# Eval runs (generated, may contain API responses)
+eval/runs/
+
+# Editor & System
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
