@@ -1,25 +1,45 @@
-import React, { useState } from 'react';
-import { DecisionDefinition, ChoiceId } from '../types/story';
+import React, { useState, useRef, useEffect } from 'react';
+import { DecisionDefinition, ChoiceId, DecisionMeta } from '../types/story';
 import { UserProfile } from '../types/user';
 import { ProgressBar } from './ProgressBar';
 import { Timer } from './Timer';
 import { TutorDrawer } from './TutorDrawer';
+import { ModelInput, predictRisk } from '../ml/mlService';
 
 interface SceneViewProps {
   decision: DecisionDefinition;
   userProfile: UserProfile;
-  onChoose: (choice: ChoiceId, isTimeout?: boolean) => void;
+  onChoose: (choice: ChoiceId, isTimeout?: boolean, meta?: DecisionMeta) => void;
+  modelInput?: ModelInput;
+  isCollectMode?: boolean;
 }
 
 export const SceneView: React.FC<SceneViewProps> = ({
   decision,
   userProfile,
   onChoose,
+  modelInput,
+  isCollectMode = false,
 }) => {
   const isBeginner = userProfile.level === 'beginner';
   const isExperienced = userProfile.level === 'experienced';
   const [isTutorOpen, setIsTutorOpen] = useState(false);
   const [hasChosen, setHasChosen] = useState(false);
+  const [hintCount, setHintCount] = useState(0);
+  const [modelIntervention, setModelIntervention] = useState(false);
+  const startTimeRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    startTimeRef.current = Date.now();
+    setHasChosen(false);
+    setHintCount(0);
+    setModelIntervention(false);
+    if (!isCollectMode && modelInput && decision.stepNumber !== 1) {
+      predictRisk(modelInput).then(result => {
+        if (result) setModelIntervention(result.probability >= result.threshold);
+      }).catch(() => undefined);
+    }
+  }, [decision.id, modelInput, isCollectMode]);
 
   // Dynamic narrative combining base + role nuance + goal nuance
   const roleText = decision.narratives.roleNuance[userProfile.role];
@@ -29,7 +49,8 @@ export const SceneView: React.FC<SceneViewProps> = ({
   const handleChoice = (choice: ChoiceId, isTimeout = false) => {
     if (hasChosen) return;
     setHasChosen(true);
-    onChoose(choice, isTimeout);
+    const durationSec = Math.max(1, Math.round((Date.now() - startTimeRef.current) / 100) / 10);
+    onChoose(choice, isTimeout, { durationSec, hintCount });
   };
 
   return (
@@ -40,7 +61,7 @@ export const SceneView: React.FC<SceneViewProps> = ({
           <div className="flex-1">
             <ProgressBar currentStep={decision.stepNumber} totalSteps={decision.totalSteps} />
           </div>
-          {isExperienced && (
+          {isExperienced && !modelIntervention && (
             <div className="shrink-0 pt-3">
               <Timer
                 key={decision.id}
@@ -106,6 +127,13 @@ export const SceneView: React.FC<SceneViewProps> = ({
         </div>
       )}
 
+      {modelIntervention && (
+        <div data-testid="hint-panel" data-model-proactive="true" className="bg-surface-elevated/90 border border-accent/40 rounded-xl p-3.5 space-y-1.5 shadow-md">
+          <div className="text-accent text-xs font-serif font-bold">Uyarlamalı Sokratik İpucu</div>
+          <p className="text-xs text-primer-text-secondary leading-relaxed font-sans italic">Karar geçmişindeki risk sinyalleri yükseldi. Hız ve geri dönüş riskini tartarak hangi varsayımı önce doğrulayacağını düşün.</p>
+        </div>
+      )}
+
       {/* Decision Choices - Placed in flow, never covered by drawer */}
       <div className="space-y-3 pt-1">
         {/* Choice A */}
@@ -158,7 +186,12 @@ export const SceneView: React.FC<SceneViewProps> = ({
           level={userProfile.level}
           role={userProfile.role}
           isOpen={isTutorOpen}
-          onToggle={() => setIsTutorOpen(prev => !prev)}
+          onToggle={() => {
+            setIsTutorOpen(prev => {
+              if (!prev) setHintCount(c => c + 1);
+              return !prev;
+            });
+          }}
         />
       </div>
     </div>

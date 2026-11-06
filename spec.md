@@ -150,7 +150,54 @@ stateDiagram-v2
 
 ---
 
-## 7. Kabul Kriterleri (EXACTLY 5 Acceptance Criteria - Given / When / Then)
+## 6.1 Makine Öğrenmesi Modeli ve Uyarlamalı Müdahale (ML Model & Adaptive Intervention)
+
+### 6.1.1 Modelin Amacı ve Çalışma Kapsamı (Model Purpose & Scope)
+Oyuncunun karar adımlarında kriz baskısı altında riskli bir tercih yapma olasılığını ($P(\text{riskli})$) tahmin etmek.
+- **Kapsam:** Model **1. Karar (Mimari) aşamasında ÇALIŞTIRILMAZ** (henüz geçmiş oturum geçmişi ve karar metriği bulunmamaktadır; bu sayede AC-1 ve AC-2 kuralları ilk kararda her zaman %100 geçerliliğini korur). Model yalnızca **2. Karar (Test)** ve **3. Karar (KVKK)** aşamalarında devreye girer.
+- **Uyarlamalı Davranış:** Karar 2 veya 3 öncesinde modelin hesapladığı riskli seçim olasılığı belirlenen eşik değerin üzerindeyse ($P(\text{riskli}) \ge 0.50$), oyun arayüzü proaktif olarak müdahale eder:
+  - 60 saniyelik kriz geri sayım sayacı kaldırılır (oyuncunun paniklemeden düşünmesi sağlanır).
+  - Sokratik mentor ipucu paneli (`[data-testid="hint-panel"]`) otomatik olarak açık görüntülenir.
+- **Veri toplama istisnası:** `?collect=1` modunda model müdahalesi tamamen kapalıdır. Timer ve ipucu davranışı doğal/standart kurallarla çalışır; otomatik ipucu açılmaz.
+- **Zarif Çöküş (Graceful Fallback):** Model yüklenemezse veya ONNX çıkarımı başarısız olursa, oyun kuralları varsayılan klasik davranışa döner; sistem asla çökmez.
+
+### 6.1.2 Model Girdileri / Nitelikler ve Birimleri (Features with Units)
+Model karardan hemen önceki durumu temsil eden 5 sayısal nitelik alır (tüm nitelikler karar anından önce bilinmektedir):
+
+1. **`seviye`** (Kategorik / Gösterge): Oyuncunun başlangıçta seçtiği deneyim seviyesi.
+   - Değerler: `0` = Başlangıç (Beginner), `1` = Deneyimli (Experienced).
+   - Birim: Birimsiz (0/1 ikili gösterge).
+2. **`sahne_no`** (Tamsayı): Mevcut karar adımı sırası.
+   - Değerler: `1`, `2`, `3` (Karar 1: Mimari, Karar 2: Test, Karar 3: KVKK).
+   - Birim: Aşama indeksi.
+3. **`onceki_ort_karar_suresi_sn`** (Ondalıklı Sayı): Oyuncunun aynı oturumda önceki kararlarda harcadığı ortalama karar süresi.
+   - Sahne 1 için önceki karar olmadığından `0.0` değerini alır.
+   - Birim: Saniye (`sn`).
+4. **`onceki_ipucu_sayisi`** (Tamsayı): Oyuncunun aynı oturumda önceki kararlarda **yalnızca kendi isteğiyle açtığı veya sorduğu** ipucu sayısı (Model tarafından otomatik açılan proaktif ipuçları kesinlikle bu sayıya dahil edilmez / sayılmaz).
+   - Sahne 1 için `0` değerini alır.
+   - Birim: Adet.
+5. **`onceki_riskli_secim_sayisi`** (Tamsayı): Oyuncunun aynı oturumda önceki kararlarda yaptığı riskli (B seçeneği) seçimlerin toplam sayısı.
+   - Sahne 1 için `0` değerini alır.
+   - Birim: Adet.
+
+### 6.1.3 Hedef Değişken (Target)
+- **`riskli_secim`** (İkili / Binary):
+  - `0` = Oyuncu güvenli/savunmacı seçeneği (Seçenek A) tercih etti.
+  - `1` = Oyuncu riskli seçeneği (Seçenek B: Canlıda yama, testsiz yayına alma, logları doğrudan iletme) tercih etti.
+  - **Önemli Kural:** Yalnızca oyuncunun kendi iradesiyle yaptığı seçimler hedef olarak etiketlenir. Süre dolduğu için sistemin otomatik seçtiği zaman aşımı satırları (`zaman_asimi == 1`) model eğitiminde ve hedef hesaplamasında **hariç tutulur** (istemsiz varsayılan olduğu için).
+
+### 6.1.4 Değerlendirme Metriği ve Başarı Eşiği (Eval Metric & Thresholds)
+- **Metrik:** **ROC-AUC** (Receiver Operating Characteristic - Area Under Curve).
+- **Sınıf Dağılımı ve Taban Çizgisi:** Gerçek sınıf dengesi (class balance), veri toplama süreci tamamlandıktan sonra toplanan gerçek veriler üzerinden raporlanacaktır. Sıfır bilgiye dayalı rastgele tahmin taban çizgisi **ROC-AUC = 0.50**'dir.
+- **Kabul Eşiği (Acceptance Threshold):**
+  - **Kabul Kriteri:** Modelin gerçek veriler üzerindeki doğrulama çıktısında elde ettiği **ROC-AUC $\ge$ 0.65** olmalıdır.
+  - **Gerekçe:** Yaklaşık 45 gerçek satırlık sınırlı veri seti büyüklüğünde AUC gürültüsü $\pm 0.08$ bandındadır. Bu kabul eşiği eğitim öncesinde belirlenmiş olup (pre-registered) eğitim sonrasında dondurulmuştur (frozen).
+- **Oyuniçi Müdahale Karar Eşiği (Intervention Threshold):** $P(\text{riskli}) \ge 0.50$ (veya `config.json` ile yapılandırılabilir eşik).
+- **Model Mimarisi:** Scikit-learn `Pipeline` (özellik ölçekleme `StandardScaler` + `LogisticRegression`). Model ONNX formatına dönüştürülerek tarayıcıda `onnxruntime-web` ile çalıştırılır.
+
+---
+
+## 7. Kabul Kriterleri (Acceptance Criteria - Given / When / Then)
 
 ### AC-1: Başlangıç Seviyesi Kişiselleştirme ve İpucu Görünürlüğü
 - **Given:** Oyuncu onboarding aşamasında `level = beginner` olarak seçim yapmıştır.
@@ -177,20 +224,35 @@ stateDiagram-v2
 - **When:** Karar 3 sonuç ekranından bitiş ekranına geçer.
 - **Then:** "Ending A" (Sistem ayakta, veriler güvende) tebrik başlığı ve D1/D2 kararlarından türetilen teknik borç özeti (`[data-testid="technical-debt-summary"]`) görüntülenir.
 
+### AC-6: Model Tahmini Eşik Üstü - Uyarlamalı Müdahale (Adaptive Intervention Above Threshold)
+- **Given:** Oyuncu deneyimli (`experienced`) moddadır ve ONNX modeli etkindir; mevcut karar öncesinde hesaplanan $P(\text{riskli}) \ge 0.50$'dir.
+- **When:** Karar ekranı yüklendiğinde.
+- **Then:** Sistem kriz baskısını hafifletmek için 60 saniyelik geri sayım sayacını kaldırır (`[data-testid="timer"]` gizlenir) ve Sokratik ipucu panelini (`[data-testid="hint-panel"]`) proaktif olarak açık görüntüler.
+
+### AC-7: Model Tahmini Eşik Altı - Standart Davranışın Korunması (Standard Behavior Below Threshold)
+- **Given:** Oyuncu deneyimli (`experienced`) moddadır ve ONNX modeli etkindir; mevcut karar öncesinde hesaplanan $P(\text{riskli}) < 0.50$'dir.
+- **When:** Karar ekranı yüklendiğinde.
+- **Then:** Uyarlamalı müdahale tetiklenmez; deneyimli oyuncu için standart kurallar geçerli kalır (60 saniyelik sayaç `[data-testid="timer"]` çalışır, ipucu paneli kapalıdır).
+
+### AC-8: Model Parite Doğrulaması (App Probability Matches Python Oracle within 1e-4)
+- **Given:** `tests/parite.json` dosyasında tanımlı 5 adet referans test girdisi ve Python ONNX çalışma zamanı tarafından üretilmiş referans $P(\text{riskli})$ olasılık değerleri mevcuttur.
+- **When:** Uygulama içindeki ONNX çıkarım mekanizması bu 5 referans girdisi üzerinde çalıştırıldığında (`#/parite` ekranında veya test koşumunda).
+- **Then:** Uygulama tarafından üretilen her bir $P(\text{riskli})$ değeri ile Python oracle çıktısı arasındaki mutlak fark $10^{-4}$ ($|P_{\text{app}} - P_{\text{oracle}}| \le 0.0001$) sınırını aşmaz.
+
 ---
 
 ## 8. İzlenebilirlik Tablosu (Traceability Matrix)
 
-| Kabul Kriteri / Kapsam | İlgili Bileşen / Katman | Doğrulayan Cypress E2E Testi |
+| Kabul Kriteri / Kapsam | İlgili Bileşen / Katman | Doğrulayan Cypress E2E / Test |
 |---|---|---|
 | **AC-1** (Beginner Hint On, No Timer) | `Onboarding.tsx`, `SceneView.tsx`, `TutorDrawer.tsx` | `cypress/e2e/acceptance_criteria.cy.ts` -> `"AC-1: Beginner level displays hint drawer and hides countdown"` |
 | **AC-2** (Experienced 60s Timeout with `cy.tick`) | `Timer.tsx`, `SceneView.tsx` | `cypress/e2e/acceptance_criteria.cy.ts` -> `"AC-2: Experienced level triggers timeout fallback when 60s expires via cy.tick"` |
 | **AC-3** (What & Why for all 6 choices) | `ConsequenceView.tsx` | `cypress/e2e/acceptance_criteria.cy.ts` -> `"AC-3: Shows non-empty what and why for all 6 decision choices"` |
 | **AC-4** (Tutor UI Wiring & Prompt Payload) | `tutorService.ts`, `TutorDrawer.tsx` | `cypress/e2e/acceptance_criteria.cy.ts` -> `"AC-4: AI Tutor sends system prompt and renders socratic reply"` |
 | **AC-5** (Path AAA -> Ending A + Debt) | `EndingView.tsx`, `storyData.ts` | `cypress/e2e/acceptance_criteria.cy.ts` -> `"AC-5: Path AAA leads to Ending A with technical debt summary"` |
-| **Actual all-path Cypress titles** | `storyData.ts`, `EndingView.tsx` | `cypress/e2e/all_paths.cy.ts` -> `path AAA reaches the storyData ending and metrics`; same title for AAB, ABA, ABB, BAA, BAB, BBA, BBB |
-| **Actual personalization Cypress titles** | `Onboarding.tsx`, `SceneView.tsx` | `cypress/e2e/personalization.cy.ts` -> `shows role-specific technical terms`; `changes wording for each goal and keeps start disabled until complete` |
-| **Actual demo Cypress title** | TÃ¼m bileÅŸenler | `cypress/e2e/demo_walkthrough.cy.ts` -> `walks a beginner AAA run and an experienced BBB run in real time` |
+| **AC-6** (ML Above Threshold -> Proactive Hint, No Timer) | `mlService.ts`, `SceneView.tsx` | `cypress/e2e/ml_behavior.cy.ts` -> `"AC-6: Above threshold removes timer and shows proactive hint"` |
+| **AC-7** (ML Below Threshold -> Standard Behavior Preserved) | `mlService.ts`, `SceneView.tsx` | `cypress/e2e/ml_behavior.cy.ts` -> `"AC-7: Below threshold preserves standard experienced timer"` |
+| **AC-8** (App vs Python Oracle Parity <= 1e-4) | `mlService.ts`, `PariteView.tsx` | `cypress/e2e/ml_parity.cy.ts` -> `"AC-8: App inference probability matches Python oracle within 1e-4"` |
 | **Ekstra: 8 Karar Yolu Kapsamı** | `storyData.ts`, `EndingView.tsx` | `cypress/e2e/all_paths.cy.ts` -> 8 kombinasyonun (AAA..BBB) tümünün A/B doğrulaması |
 | **Ekstra: Rol & Hedef Kişiselleştirme** | `Onboarding.tsx`, `SceneView.tsx` | `cypress/e2e/personalization.cy.ts` -> DevOps (Kubernetes/Canary), Backend (DB Pool/Migration), Frontend terimleri doğrulaması |
 | **Ekstra: 60s Video Demo** | Tüm bileşenler | `cypress/e2e/demo_walkthrough.cy.ts` -> 1 iyi ve 1 kötü sonun `cy.tick` ile izlenebilir akışı |

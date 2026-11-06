@@ -1,0 +1,58 @@
+[
+  {
+    "description": "Experienced player, scene 2, fast decisions, no hints, 1 prior risky",
+    "input": {
+      "seviye": 1,
+      "sahne_no": 2,
+      "onceki_ort_karar_suresi_sn": 20.0,
+      "onceki_ipucu_sayisi": 0,
+      "onceki_riskli_secim_sayisi": 1
+    },
+    "p_riskli": 0.618216
+  },
+  {
+    "description": "Beginner, scene 2, slow decisions, 2 hints, 0 prior risky",
+    "input": {
+      "seviye": 0,
+      "sahne_no": 2,
+      "onceki_ort_karar_suresi_sn": 45.0,
+      "onceki_ipucu_sayisi": 2,
+      "onceki_riskli_secim_sayisi": 0
+    },
+    "p_riskli": 0.086989
+  },
+  {
+    "description": "Experienced player, scene 3, very fast decisions, no hints, 2 prior risky",
+    "input": {
+      "seviye": 1,
+      "sahne_no": 3,
+      "onceki_ort_karar_suresi_sn": 15.0,
+      "onceki_ipucu_sayisi": 0,
+      "onceki_riskli_secim_sayisi": 2
+    },
+    "p_riskli": 0.740829
+  },
+  {
+    "description": "Beginner, scene 3, slow decisions, 3 hints, 1 prior risky",
+    "input": {
+      "seviye": 0,
+      "sahne_no": 3,
+      "onceki_ort_karar_suresi_sn": 60.0,
+      "onceki_ipucu_sayisi": 3,
+      "onceki_riskli_secim_sayisi": 1
+    },
+    "p_riskli": 0.089988
+  },
+  {
+    "description": "Beginner, scene 2, very fast decisions, no hints, 0 prior risky",
+    "input": {
+      "seviye": 0,
+      "sahne_no": 2,
+      "onceki_ort_karar_suresi_sn": 10.0,
+      "onceki_ipucu_sayisi": 0,
+      "onceki_riskli_secim_sayisi": 0
+    },
+    "p_riskli": 0.203106
+  }
+]
+

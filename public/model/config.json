@@ -1,0 +1,45 @@
+{
+  "auc": 0.7313,
+  "n_real_rows": 0,
+  "n_real_sessions": 0,
+  "real_class_balance": {},
+  "n_synthetic_rows": 240,
+  "synthetic_rows_used": 240,
+  "feature_order": [
+    "seviye",
+    "sahne_no",
+    "onceki_ort_karar_suresi_sn",
+    "onceki_ipucu_sayisi",
+    "onceki_riskli_secim_sayisi"
+  ],
+  "class_labels": [
+    0,
+    1
+  ],
+  "intervention_threshold": 0.5,
+  "model": "LogisticRegression + StandardScaler (sklearn Pipeline)",
+  "random_state": 42,
+  "date": "2026-11-06",
+  "scaler_mean": [
+    0.5583333333333333,
+    2.5,
+    26.5387499888738,
+    0.625,
+    0.5916666666666667
+  ],
+  "scaler_scale": [
+    0.49658556384798613,
+    0.5,
+    10.057669097951347,
+    0.677772085586298,
+    0.6707686304200245
+  ],
+  "classifier_coefficients": [
+    0.6968314774698249,
+    -0.056106627679124894,
+    -0.1574281592007726,
+    -0.14779846792238235,
+    0.40397270316809847
+  ],
+  "classifier_intercept": -0.678451076990495
+}

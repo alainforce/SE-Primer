@@ -1,13 +1,35 @@
-import React from 'react';
-import { PathOutcome } from '../types/story';
+import React, { useState } from 'react';
+import { PathOutcome, DecisionRecord } from '../types/story';
 
 interface EndingViewProps {
   outcome: PathOutcome;
   onRestart: () => void;
+  isCollectMode?: boolean;
+  decisionRecords?: DecisionRecord[];
 }
 
-export const EndingView: React.FC<EndingViewProps> = ({ outcome, onRestart }) => {
+export const EndingView: React.FC<EndingViewProps> = ({
+  outcome,
+  onRestart,
+  isCollectMode = false,
+  decisionRecords = [],
+}) => {
   const isEndingA = outcome.ending === 'A';
+  const [copied, setCopied] = useState(false);
+
+  const handleCopySession = () => {
+    if (!decisionRecords || decisionRecords.length === 0) return;
+    const header = 'oturum_id,kaynak,sahne_no,seviye,rol,hedef,karar_suresi_sn,onceki_ort_karar_suresi_sn,onceki_ipucu_sayisi,onceki_riskli_secim_sayisi,secim,riskli_secim,zaman_asimi';
+    const rows = decisionRecords.map(r =>
+      `${r.oturum_id},gercek,${r.sahne_no},${r.seviye},${r.rol},${r.hedef},${r.karar_suresi_sn},${r.onceki_ort_karar_suresi_sn},${r.onceki_ipucu_sayisi},${r.onceki_riskli_secim_sayisi},${r.secim},${r.riskli_secim},${r.zaman_asimi}`
+    );
+    const csvContent = [header, ...rows].join('\n');
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(csvContent);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 3000);
+    }
+  };
 
   return (
     <div className="w-full max-w-md mx-auto space-y-5 py-3 px-2 pb-10">
@@ -135,6 +157,32 @@ export const EndingView: React.FC<EndingViewProps> = ({ outcome, onRestart }) =>
         </ul>
       </div>
 
+      {/* Anonymous Collect Mode Section */}
+      {isCollectMode && (
+        <div className="bg-surface border border-accent/40 rounded-2xl p-4 space-y-3 shadow-lg">
+          <div className="flex items-center gap-2 text-accent font-serif font-bold text-sm">
+            <svg className="w-4 h-4 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span>Anonim Veri Toplama Modu Aktif</span>
+          </div>
+          <p
+            data-testid="collect-consent-notice"
+            className="text-xs text-primer-text-secondary leading-relaxed font-sans"
+          >
+            Bu oturumda kişisel hiçbir veri toplanmamış olup, yalnızca anonim oyun içi karar metrikleri (süre, seçim, ipucu etkileşimi) kayıt altına alınmıştır. Bu veriler model eğitimi ve araştırma amacıyla kullanılabilir.
+          </p>
+          <button
+            type="button"
+            data-testid="copy-session-button"
+            onClick={handleCopySession}
+            className="w-full py-2.5 px-3 min-h-[44px] rounded-xl border border-accent text-accent hover:bg-accent hover:text-canvas transition-colors text-xs font-mono font-bold flex items-center justify-center gap-2 cursor-pointer"
+          >
+            {copied ? '✓ Oturum CSV Olarak Kopyalandı!' : '📋 Oturumu Kopyala (CSV)'}
+          </button>
+        </div>
+      )}
+
       {/* Restart Simulation Button */}
       <button
         type="button"
@@ -147,4 +195,3 @@ export const EndingView: React.FC<EndingViewProps> = ({ outcome, onRestart }) =>
     </div>
   );
 };
-

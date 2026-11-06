@@ -119,3 +119,10 @@ Tüm etkileşimli bileşenler ve kritik durum göstergeleri Cypress testlerinin 
 | `ending-badge` | EndingView | Bitiş rozeti/mührü (üzerinde `data-ending="A"` veya `data-ending="B"` taşır) |
 | `technical-debt-summary` | EndingView | D1 ve D2 seçimlerinden türetilen teknik borç listesi |
 | `restart-button` | EndingView | Simülasyonu yeniden başlatma butonu |
+| `collect-consent-notice` | EndingView | Veri toplama modu (?collect=1) onay ve bilgilendirme metni |
+| `copy-session-button` | EndingView | Veri toplama modunda oturumu CSV olarak panoya kopyalama butonu |
+| `collect-start-notice` | App | `?collect=1` oturumunun başlangıç onay/bilgilendirme satırı |
+| `hint-panel` | SceneView | Beginner statik veya model eşik üstü otomatik ipucu paneli |
+| `data-cy="input-*"` | PariteView | Parite girdileri |
+| `data-cy="run"` | PariteView | Parite tahmini butonu |
+| `data-cy="p"` | PariteView | Model olasılığı |

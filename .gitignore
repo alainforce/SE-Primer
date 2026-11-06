@@ -7,6 +7,7 @@ node_modules/
 dist/
 dist-ssr/
 *.local
+model_dev/
 
 # Environment variables
 .env
@@ -17,6 +18,9 @@ dist-ssr/
 cypress/videos/
 cypress/screenshots/
 
+# Python bytecode
+__pycache__/
+
 # Eval runs (generated, may contain API responses)
 eval/runs/
 
@@ -25,4 +29,3 @@ eval/runs/
 Thumbs.db
 .vscode/
 .idea/
-

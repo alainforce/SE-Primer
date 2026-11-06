@@ -11,5 +11,5 @@ Module._load = function (request, parent, isMain) {
 const entry = require.resolve('start-server-and-test');
 const cli = path.join(path.dirname(entry), 'bin', 'start.js');
 const testScript = process.argv.includes('--demo') ? 'cypress:demo' : 'cypress:run';
-process.argv = [process.argv[0], cli, 'start', 'http://localhost:5173', testScript];
+process.argv = [process.argv[0], cli, 'start', 'http://127.0.0.1:5173', testScript];
 require(cli);
